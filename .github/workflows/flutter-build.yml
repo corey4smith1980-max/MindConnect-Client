@@ -996,6 +996,11 @@ jobs:
     needs: [generate-bridge]
     name: Android APK ${{ matrix.job.arch }}
     runs-on: ubuntu-22.04
+    env:
+      ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+      ANDROID_ALIAS: ${{ secrets.ANDROID_ALIAS }}
+      ANDROID_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -1172,7 +1177,7 @@ jobs:
           echo "signing=debug-keystore" >> "$GITHUB_ENV"
 
       - name: Setup Android build-tools version
-        if: ${{ secrets.ANDROID_SIGNING_KEY != '' }}
+        if: env.ANDROID_SIGNING_KEY != ''
         shell: bash
         run: |
           BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
@@ -1180,20 +1185,20 @@ jobs:
           echo "Last build tool version is: $BUILD_TOOL_VERSION"
 
       - name: Sign release APK
-        if: ${{ secrets.ANDROID_SIGNING_KEY != '' }}
+        if: env.ANDROID_SIGNING_KEY != ''
         uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407 # v1
         id: sign-android
         with:
           releaseDirectory: ./android-out
-          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-          alias: ${{ secrets.ANDROID_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          signingKeyBase64: ${{ env.ANDROID_SIGNING_KEY }}
+          alias: ${{ env.ANDROID_ALIAS }}
+          keyStorePassword: ${{ env.ANDROID_KEY_STORE_PASSWORD }}
+          keyPassword: ${{ env.ANDROID_KEY_PASSWORD }}
         env:
           BUILD_TOOLS_VERSION: ${{ env.ANDROID_SIGN_TOOL_VERSION }}
 
       - name: Prefer the release-signed APK
-        if: ${{ secrets.ANDROID_SIGNING_KEY != '' }}
+        if: env.ANDROID_SIGNING_KEY != ''
         shell: bash
         run: |
           set -euo pipefail
@@ -1220,7 +1225,7 @@ jobs:
             echo "### Android ${{ matrix.job.arch }}"
             echo
             echo "APK artifact: \`mindconnect-android-${{ matrix.job.arch }}\`."
-            if [ "${{ secrets.ANDROID_SIGNING_KEY != '' }}" = "true" ]; then
+            if [ -n "${ANDROID_SIGNING_KEY:-}" ]; then
               echo "Release keystore secrets are set. The uploaded APK is signed with \`ANDROID_SIGNING_KEY\` when that step succeeds."
             else
               echo "No \`ANDROID_SIGNING_KEY\` secret is set. The APK is signed with the Android debug keystore so it can be sideloaded. It is not a Play Store signature."
