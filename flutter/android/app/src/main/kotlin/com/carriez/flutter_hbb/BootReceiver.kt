@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import android.widget.Toast
 import com.hjq.permissions.XXPermissions
 import io.flutter.embedding.android.FlutterActivity
 
@@ -26,17 +25,16 @@ class BootReceiver : BroadcastReceiver() {
                 Log.d(logTag, "KEY_START_ON_BOOT_OPT is false")
                 return
             }
-            // check pre-permission
+            // Screen capture and accessibility still need a one-time user grant.
+            // Start the service anyway so the host can register after reboot.
             if (!XXPermissions.isGranted(context, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, SYSTEM_ALERT_WINDOW)){
-                Log.d(logTag, "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS or SYSTEM_ALERT_WINDOW is not granted")
-                return
+                Log.d(logTag, "battery or overlay permission missing; starting service without them")
             }
 
             val it = Intent(context, MainService::class.java).apply {
                 action = ACT_INIT_MEDIA_PROJECTION_AND_SERVICE
                 putExtra(EXT_INIT_FROM_BOOT, true)
             }
-            Toast.makeText(context, "RustDesk is Open", Toast.LENGTH_LONG).show()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(it)
             } else {

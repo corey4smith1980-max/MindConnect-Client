@@ -940,9 +940,6 @@ pub fn get_sysinfo() -> serde_json::Value {
         os = format!("{os} - {}", system.os_version().unwrap_or_default());
     }
     let hostname = hostname(); // sys.hostname() return localhost on android in my test
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    let out;
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let mut out;
     out = json!({
         "cpu": format!("{cpu}{num_cpus}/{num_pcpus} cores"),
@@ -2494,6 +2491,28 @@ pub fn load_embedded_support_client() -> bool {
     true
 }
 
+fn baked_server_config_json() -> &'static str {
+    include_str!(concat!(env!("OUT_DIR"), "/mindconnect_server.json"))
+}
+
+/// Locks ID, relay, API, and key to the compile-time MindConnect server.
+///
+/// `override-settings` wins over a saved config and over `custom.txt`.
+/// `hide-server-settings` removes those fields from Settings → Network.
+pub fn apply_baked_server_config() {
+    apply_custom_client_map(baked_server_config_json().as_bytes());
+}
+
+/// Applies the baked server when `load_custom_client` returns, including the
+/// paths that return after reading `custom.txt`. Support builds return first.
+struct ApplyBakedServerOnDrop;
+
+impl Drop for ApplyBakedServerOnDrop {
+    fn drop(&mut self) {
+        apply_baked_server_config();
+    }
+}
+
 pub fn load_custom_client() {
     if load_embedded_support_client() {
         return;
@@ -2504,6 +2523,8 @@ pub fn load_custom_client() {
         );
         return;
     }
+
+    let _baked_server = ApplyBakedServerOnDrop;
 
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
@@ -3130,6 +3151,30 @@ mod tests {
         for release_id in ["v1.4.6-rc1", "nightly", "v9223372036854775807.1.1"] {
             assert!(display_version_from_release_id(release_id).is_err());
         }
+    }
+
+    #[test]
+    fn baked_server_override_is_complete() {
+        let value: serde_json::Value =
+            serde_json::from_str(baked_server_config_json()).expect("baked server json");
+        let settings = value["override-settings"]
+            .as_object()
+            .expect("override-settings");
+        for key in [
+            "custom-rendezvous-server",
+            "relay-server",
+            "api-server",
+            "key",
+            "hide-server-settings",
+        ] {
+            let text = settings[key].as_str().unwrap_or("");
+            assert!(!text.is_empty(), "{key} is empty");
+        }
+        assert_eq!(settings["hide-server-settings"], "Y");
+        let id = settings["custom-rendezvous-server"].as_str().unwrap();
+        assert!(!id.to_ascii_lowercase().contains("rustdesk.com"));
+        let api = settings["api-server"].as_str().unwrap();
+        assert!(api.starts_with("http://") || api.starts_with("https://"));
     }
 
     #[inline]

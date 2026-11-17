@@ -48,6 +48,10 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
         crate::load_custom_client();
     } else {
         crate::read_custom_client(custom_client_config);
+        crate::apply_baked_server_config();
+    }
+    if crate::unattended::is_unattended_build() {
+        crate::unattended::apply_unattended_host(None);
     }
     crate::hbbs_http::betterdesk::log_client_identity();
     #[cfg(target_os = "android")]
@@ -2973,11 +2977,18 @@ pub mod server_side {
         if let Ok(home_dir) = env.get_string(&home_dir) {
             *config::APP_HOME_DIR.write().unwrap() = home_dir.into();
         }
-        if let Ok(custom_client_config) = env.get_string(&custom_client_config) {
-            if !crate::load_embedded_support_client() && !custom_client_config.is_empty() {
+        if !crate::load_embedded_support_client() {
+            if let Ok(custom_client_config) = env.get_string(&custom_client_config) {
                 let custom_client_config: String = custom_client_config.into();
-                crate::read_custom_client(&custom_client_config);
+                if !custom_client_config.is_empty() {
+                    crate::read_custom_client(&custom_client_config);
+                }
             }
+            // The Android server entrypoint does not go through `main_init`.
+            crate::apply_baked_server_config();
+        }
+        if crate::unattended::is_unattended_build() {
+            crate::unattended::apply_unattended_host(None);
         }
         std::thread::spawn(move || start_server(true));
     }
@@ -2985,6 +2996,12 @@ pub mod server_side {
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_startService(_env: JNIEnv, _class: JClass) {
         log::debug!("startService from jvm");
+        if !crate::load_embedded_support_client() {
+            crate::load_custom_client();
+        }
+        if crate::unattended::is_unattended_build() {
+            crate::unattended::apply_unattended_host(None);
+        }
         config::Config::set_option("stop-service".into(), "".into());
         crate::rendezvous_mediator::reset_needs_deploy_notification();
         crate::rendezvous_mediator::RendezvousMediator::restart();

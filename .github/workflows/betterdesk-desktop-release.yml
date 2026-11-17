@@ -168,6 +168,22 @@ jobs:
           path: dist-raw/windows-installers
           merge-multiple: true
 
+      - name: Download Android APKs
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mindconnect-android-*
+          path: dist-raw/android
+          merge-multiple: true
+
+      - name: Download unsigned iOS IPA
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mindconnect-ios-unsigned
+          path: dist-raw/ios
+          merge-multiple: true
+
       - name: Normalize BetterDesk layout (full client only)
         shell: bash
         run: |
@@ -253,6 +269,13 @@ jobs:
             fi
           done
 
+          if [ -d dist-raw/android ]; then
+            find dist-raw/android -type f -name '*.apk' -exec cp {} dist/clean/ \;
+          fi
+          if [ -d dist-raw/ios ]; then
+            find dist-raw/ios -type f -name '*.ipa' -exec cp {} dist/clean/ \;
+          fi
+
           # Guard: never publish Support Agent bake-ins from CI
           if find dist/clean dist/msi-template dist/generator-templates* \
               \( -iname '*betterdesk-support*' -o -iname '*incoming-only*' -o -name 'custom.txt' \) \
@@ -304,8 +327,8 @@ jobs:
               "variant": "clean",
               "version": version,
               "note": (
-                  "Official BetterDesk Client (full). No custom.txt / no Support Agent bake-in. "
-                  "Configure Settings → Network. Incoming-only Support Agents are separate support-v* releases."
+                  "Official BetterDesk Client (full). Server endpoints are compiled in from res/mindconnect/server.json. "
+                  "ID/relay/API/key are locked. Incoming-only Support Agents are separate support-v* releases."
               ),
               "assets": assets,
           }
@@ -342,7 +365,10 @@ jobs:
             echo "### Notes"
             echo
             echo "- Windows: portable **EXE** and installed **MSI** for x86_64 and ARM64."
-            echo "- Configure servers in Settings → Network, or import a deploy string from the BetterDesk panel."
+            echo "- Linux: DEB and RPM. macOS: DMG. Android: APK (arm64, armv7, x86_64)."
+            echo "- The client is preconfigured from \`res/mindconnect/server.json\`. ID, relay, API, and key are locked."
+            echo "- Android APKs without \`ANDROID_SIGNING_KEY\` are debug-keystore signed and can be sideloaded."
+            echo "- The iOS IPA is unsigned and is not installable on a device until it is signed with an Apple certificate."
             echo "- Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             if [ "${IS_DEV}" = "true" ]; then
               echo "- This is a **development prerelease** published after an update on \`master\`."

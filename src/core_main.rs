@@ -285,22 +285,29 @@ pub fn core_main() -> Option<CoreMainAction> {
                     return None;
                 }
                 let (printer_override, debug) = parse_silent_install_args(&args);
+                let password = crate::unattended::silent_install_password(&args);
                 let options = platform::get_silent_install_options(printer_override);
                 let res = platform::install_me(options, "".to_owned(), true, debug);
-                let text = match res {
-                    Ok(_) => translate("Installation Successful!".to_string()),
+                match res {
+                    Ok(_) => {
+                        if let Some(path) =
+                            crate::unattended::apply_unattended_host(password.as_deref())
+                        {
+                            println!("Unattended password file: {}", path.display());
+                        }
+                        println!("Installation Successful!");
+                    }
                     Err(err) => {
                         println!("Failed with error: {err}");
-                        translate("Installation failed!".to_string())
                     }
-                };
-                Toast::new(Toast::POWERSHELL_APP_ID)
-                    .title(&config::APP_NAME.read().unwrap())
-                    .text1(&text)
-                    .sound(Some(Sound::Default))
-                    .duration(Duration::Short)
-                    .show()
-                    .ok();
+                }
+                return None;
+            } else if args[0] == "--apply-unattended" {
+                let password = args.get(1).map(String::as_str).filter(|value| !value.is_empty());
+                match crate::unattended::apply_unattended_host(password) {
+                    Some(path) => println!("Unattended password file: {}", path.display()),
+                    None => println!("Unattended access is configured"),
+                }
                 return None;
             } else if args[0] == "--uninstall-cert" {
                 #[cfg(windows)]

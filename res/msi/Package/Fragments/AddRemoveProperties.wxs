@@ -11,6 +11,8 @@
 
 		<Property Id="LAUNCH_TRAY_APP" Value="Y" />
 		<Property Id="LAUNCH_MAIN_APP" Value="N" />
+		<!-- Public install-time password. Secure so msiexec does not write it to the log. -->
+		<Property Id="PERMANENTPASSWORD" Secure="yes" />
 
 		<!--
 		Support entries shown when clicking "Click here for support information"

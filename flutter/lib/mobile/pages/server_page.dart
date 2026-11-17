@@ -189,6 +189,26 @@ class _ServerPageState extends State<ServerPage> {
       await gFFI.serverModel.fetchID();
     });
     gFFI.serverModel.checkAndroidPermission();
+    _prepareUnattendedHost();
+  }
+
+  void _prepareUnattendedHost() {
+    if (!isAndroid) {
+      return;
+    }
+    if (bind.mainGetOptionSync(key: 'unattended-host') != 'Y') {
+      return;
+    }
+    gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, true);
+    if (!gFFI.serverModel.isStart) {
+      gFFI.serverModel.startService();
+    }
+    if (bind.mainGetLocalOption(key: 'unattended-prompted') == 'Y') {
+      return;
+    }
+    bind.mainSetLocalOption(key: 'unattended-prompted', value: 'Y');
+    gFFI.invokeMethod(
+        AndroidChannel.kStartAction, 'android.settings.ACCESSIBILITY_SETTINGS');
   }
 
   @override
