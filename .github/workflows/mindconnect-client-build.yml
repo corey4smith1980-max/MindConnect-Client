@@ -1,6 +1,7 @@
-# Pull requests build the Android arm64 APK first.
+# Pull requests build the unattended Windows x64 installer and Android host APK.
 # workflow_dispatch scope:
-#   android-arm64 — one sideloadable APK
+#   unattended — Windows x64 MSI/EXE and the Android host APK
+#   android-arm64 — Android arm64 APK only
 #   rest — Windows, Linux, and macOS (no iOS)
 #   all — every job, including the unsigned iOS IPA
 name: MindConnect client builds
@@ -9,18 +10,19 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: "android-arm64, rest, or all"
+        description: "unattended, android-arm64, rest, or all"
         required: true
-        default: android-arm64
+        default: unattended
         type: choice
         options:
+          - unattended
           - android-arm64
           - rest
           - all
   pull_request:
 
 concurrency:
-  group: mindconnect-${{ github.ref }}-${{ github.event.inputs.scope || 'android-arm64' }}
+  group: mindconnect-${{ github.ref }}-${{ github.event.inputs.scope || 'unattended' }}
   cancel-in-progress: true
 
 jobs:
@@ -29,5 +31,5 @@ jobs:
     with:
       upload-artifact: true
       upload-tag: build-${{ github.run_id }}
-      scope: ${{ github.event.inputs.scope || 'android-arm64' }}
+      scope: ${{ github.event.inputs.scope || 'unattended' }}
     secrets: inherit

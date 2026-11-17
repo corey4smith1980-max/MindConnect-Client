@@ -26,7 +26,7 @@ on:
         type: string
         default: ""
       scope:
-        description: "android-arm64, rest (Windows/Linux/macOS), or all"
+        description: "android-arm64, unattended, rest, or all"
         type: string
         default: "all"
 
@@ -94,27 +94,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job:
-          # - { target: i686-pc-windows-msvc        , os: windows-2022                  }
-          # - { target: x86_64-pc-windows-gnu       , os: windows-2022                  }
-          - {
-              target: x86_64-pc-windows-msvc,
-              os: windows-2022,
-              arch: x86_64,
-              flutter-arch: x64,
-              vcpkg-triplet: x64-windows-static,
-              build-args: "--vram",
-            }
-          - {
-              target: aarch64-pc-windows-msvc,
-              os: windows-11-arm,
-              arch: aarch64,
-              flutter-arch: arm64,
-              vcpkg-triplet: arm64-windows-static,
-              # vram is x86/x64-only (NVENC needs CUDA, Intel MediaSDK needs __rdtsc);
-              # no NV/Intel/AMD hardware exists on Windows-on-ARM, so vram stays disabled here.
-              build-args: "",
-            }
+        job: ${{ fromJSON(inputs.scope == 'unattended' && '[{"target":"x86_64-pc-windows-msvc","os":"windows-2022","arch":"x86_64","flutter-arch":"x64","vcpkg-triplet":"x64-windows-static","build-args":"--vram"}]' || '[{"target":"x86_64-pc-windows-msvc","os":"windows-2022","arch":"x86_64","flutter-arch":"x64","vcpkg-triplet":"x64-windows-static","build-args":"--vram"},{"target":"aarch64-pc-windows-msvc","os":"windows-11-arm","arch":"aarch64","flutter-arch":"arm64","vcpkg-triplet":"arm64-windows-static","build-args":""}]') }}
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
@@ -460,7 +440,7 @@ jobs:
       # GitHub Release is published only by betterdesk-desktop-release.yml.
 
   build-for-macOS:
-    if: inputs.scope != 'android-arm64'
+    if: inputs.scope == 'all' || inputs.scope == 'rest'
     name: ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     needs: [generate-bridge]
@@ -682,7 +662,7 @@ jobs:
           done
 
   build-rustdesk-linux:
-    if: inputs.scope != 'android-arm64'
+    if: inputs.scope == 'all' || inputs.scope == 'rest'
     needs: [generate-bridge]
     name: build rustdesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
@@ -1003,7 +983,7 @@ jobs:
             betterdesk-*.rpm
 
   build-mindconnect-android:
-    if: inputs.scope == 'all' || inputs.scope == 'android-arm64'
+    if: inputs.scope == 'all' || inputs.scope == 'android-arm64' || inputs.scope == 'unattended'
     needs: [generate-bridge]
     name: Android APK ${{ matrix.job.arch }}
     runs-on: ubuntu-22.04
@@ -1012,10 +992,12 @@ jobs:
       ANDROID_ALIAS: ${{ secrets.ANDROID_ALIAS }}
       ANDROID_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      MINDCONNECT_UNATTENDED: ${{ inputs.scope == 'unattended' && '1' || '' }}
+      MINDCONNECT_PERMANENT_PASSWORD: ${{ secrets.MINDCONNECT_PERMANENT_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
-        job: ${{ fromJSON(inputs.scope == 'android-arm64' && '[{"arch":"aarch64","target":"aarch64-linux-android","abi":"arm64-v8a","flutter-platform":"android-arm64","ndk-lib":"aarch64-linux-android","script":"./flutter/ndk_arm64.sh"}]' || '[{"arch":"aarch64","target":"aarch64-linux-android","abi":"arm64-v8a","flutter-platform":"android-arm64","ndk-lib":"aarch64-linux-android","script":"./flutter/ndk_arm64.sh"},{"arch":"armv7","target":"armv7-linux-androideabi","abi":"armeabi-v7a","flutter-platform":"android-arm","ndk-lib":"arm-linux-androideabi","script":"./flutter/ndk_arm.sh"},{"arch":"x86_64","target":"x86_64-linux-android","abi":"x86_64","flutter-platform":"android-x64","ndk-lib":"x86_64-linux-android","script":"./flutter/ndk_x64.sh"}]') }}
+        job: ${{ fromJSON((inputs.scope == 'android-arm64' || inputs.scope == 'unattended') && '[{"arch":"aarch64","target":"aarch64-linux-android","abi":"arm64-v8a","flutter-platform":"android-arm64","ndk-lib":"aarch64-linux-android","script":"./flutter/ndk_arm64.sh"}]' || '[{"arch":"aarch64","target":"aarch64-linux-android","abi":"arm64-v8a","flutter-platform":"android-arm64","ndk-lib":"aarch64-linux-android","script":"./flutter/ndk_arm64.sh"},{"arch":"armv7","target":"armv7-linux-androideabi","abi":"armeabi-v7a","flutter-platform":"android-arm","ndk-lib":"arm-linux-androideabi","script":"./flutter/ndk_arm.sh"},{"arch":"x86_64","target":"x86_64-linux-android","abi":"x86_64","flutter-platform":"android-x64","ndk-lib":"x86_64-linux-android","script":"./flutter/ndk_x64.sh"}]') }}
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1

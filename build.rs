@@ -275,6 +275,8 @@ fn validate_embedded_support_config() {
 
 fn main() {
     hbb_common::gen_version();
+    println!("cargo:rerun-if-env-changed=MINDCONNECT_UNATTENDED");
+    println!("cargo:rerun-if-env-changed=MINDCONNECT_PERMANENT_PASSWORD");
     bake_mindconnect_server();
     validate_embedded_support_config();
     install_android_deps();

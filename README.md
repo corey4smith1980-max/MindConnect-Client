@@ -86,6 +86,31 @@ The values are applied as RustDesk `override-settings`, with `hide-server-settin
 
 `BETTERDESK_SUPPORT_CONFIG_B64` and `BETTERDESK_GENERIC_SUPPORT=1` keep their own Support Agent behavior and do not use this file.
 
+## Unattended host
+
+The same client can be installed as a headless host for machines you administer. It keeps the baked-in server from [Built-in server](#built-in-server). Incoming sessions use a permanent password and do not ask anyone to click Accept (`approve-mode=password`, `verification-method=use-permanent-password`).
+
+The password is not stored in this repository. Set it at install time, or as the `MINDCONNECT_PERMANENT_PASSWORD` secret when building the Android host APK. If neither is set, the installer generates a password and writes it to a local file.
+
+### Windows
+
+Silent install installs the Windows service (`start= auto`, restart on failure) and does not open a window or the tray. The service registers with the baked-in server on its own.
+
+```bat
+betterdesk-1.5.0-x86_64.exe --silent-install password=YourSecret
+msiexec /i betterdesk-1.5.0-x86_64.msi /qn PERMANENTPASSWORD=YourSecret
+```
+
+Omit `password=` or `PERMANENTPASSWORD` to generate one. The plaintext is written to `C:\ProgramData\BetterDesk\unattended-password.txt` (Administrators). The password is not printed. Run the installer from an elevated command prompt. `PERMANENTPASSWORD` is a secure MSI property, so `msiexec` does not put it in the install log.
+
+After that, a controller connects with the device ID and this password. No one has to approve the session. The service can register before anyone logs on. Input on the Windows secure desktop can still be limited by Windows itself.
+
+### Android
+
+The unattended CI APK is built with `MINDCONNECT_UNATTENDED=1`. On first launch it turns on start-at-boot, asks for screen capture, and opens Accessibility settings. The password file is `unattended-password.txt` in the app files directory.
+
+Android cannot grant screen capture or accessibility by itself. Those are one-time on-device prompts unless the device is rooted or enrolled in MDM that can push the grants. After a reboot, MediaProjection does not survive, so screen capture needs that grant again until the device is managed. The host process still starts on boot and registers with the server.
+
 ## Build
 
 Desktop tool versions and local Windows/Linux commands: **[docs/BUILD_DESKTOP.md](docs/BUILD_DESKTOP.md)**.
@@ -95,7 +120,7 @@ git submodule update --init --recursive
 # optional: export MINDCONNECT_ID_SERVER=... MINDCONNECT_RELAY_SERVER=... MINDCONNECT_API_SERVER=... MINDCONNECT_KEY=...
 ```
 
-CI workflow [`.github/workflows/mindconnect-client-build.yml`](.github/workflows/mindconnect-client-build.yml) runs on pull requests and **workflow_dispatch**. It calls [`.github/workflows/flutter-build.yml`](.github/workflows/flutter-build.yml). A push to `master` (and `desktop/*` tags) also builds through [`.github/workflows/betterdesk-desktop-release.yml`](.github/workflows/betterdesk-desktop-release.yml) and publishes a GitHub Release.
+CI workflow [`.github/workflows/mindconnect-client-build.yml`](.github/workflows/mindconnect-client-build.yml) runs on pull requests and **workflow_dispatch**. A pull request builds the unattended Windows x64 installer and the Android host APK (`scope: unattended`). Dispatch `rest` or `all` for Linux, macOS, and the other Android ABIs. It calls [`.github/workflows/flutter-build.yml`](.github/workflows/flutter-build.yml). A push to `master` (and `desktop/*` tags) also builds through [`.github/workflows/betterdesk-desktop-release.yml`](.github/workflows/betterdesk-desktop-release.yml) and publishes a GitHub Release. Optional secret `MINDCONNECT_PERMANENT_PASSWORD` is compiled into the unattended Android APK only; leave it unset to generate a password on the device.
 
 | Platform | CI artifact | Install |
 |---|---|---|
