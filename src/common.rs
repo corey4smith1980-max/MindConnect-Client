@@ -940,9 +940,6 @@ pub fn get_sysinfo() -> serde_json::Value {
         os = format!("{os} - {}", system.os_version().unwrap_or_default());
     }
     let hostname = hostname(); // sys.hostname() return localhost on android in my test
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    let out;
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let mut out;
     out = json!({
         "cpu": format!("{cpu}{num_cpus}/{num_pcpus} cores"),
