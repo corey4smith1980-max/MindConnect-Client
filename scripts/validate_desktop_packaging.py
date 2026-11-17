@@ -2,6 +2,7 @@
 """Check the source-level launcher and installer contract for desktop builds."""
 
 from pathlib import Path
+import json
 import sys
 
 
@@ -90,6 +91,26 @@ require("src/platform/macos.rs", macos_runtime, 'com.unitronix.{}_server.plist')
 
 release = read(".github/workflows/betterdesk-desktop-release.yml")
 require(".github/workflows/betterdesk-desktop-release.yml", release, 'betterdesk-unsigned-macos-${arch}')
+require(".github/workflows/betterdesk-desktop-release.yml", release, "mindconnect-android-")
+
+server = json.loads(read("res/mindconnect/server.json"))
+for key, expected in {
+    "id_server": "104.207.90.103",
+    "relay_server": "104.207.90.103",
+    "api_server": "http://104.207.90.103:21121",
+    "key": "ddU+/IrwdxX+Y/CGwJK7Ap3/lGNvYrLMTXcizekHlWo=",
+}.items():
+    if server.get(key) != expected:
+        failures.append(f"res/mindconnect/server.json: {key} is {server.get(key)!r}")
+
+flutter_ci = read(".github/workflows/flutter-build.yml")
+require(".github/workflows/flutter-build.yml", flutter_ci, "build-mindconnect-android")
+require(".github/workflows/flutter-build.yml", flutter_ci, "build-mindconnect-ios")
+require(".github/workflows/flutter-build.yml", flutter_ci, "MINDCONNECT_ID_SERVER")
+require(".github/workflows/flutter-build.yml", flutter_ci, "MINDCONNECT_KEY")
+
+caller = read(".github/workflows/mindconnect-client-build.yml")
+require(".github/workflows/mindconnect-client-build.yml", caller, "flutter-build.yml")
 
 if failures:
     print("\n".join(failures), file=sys.stderr)

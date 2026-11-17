@@ -136,8 +136,8 @@ def render_table(
         title = "### Full Client (BetterDesk Desktop)"
         blurb = (
             "**Type:** full remote-desktop client (`product_sku=betterdesk-desktop`). "
-            "Can connect outbound and accept inbound. Configure the server in "
-            "**Settings → Network** (or via a deploy string from the BetterDesk panel)."
+            "Can connect outbound and accept inbound. ID, relay, API, and key are "
+            "compiled in from `res/mindconnect/server.json` and locked in Settings."
         )
     else:
         title = "### Incoming-only Support Agent"
@@ -212,6 +212,12 @@ def render_notes(
                 other.append(f"- [{name}]({_url(repo, tag, name)}) — clean Generator templates")
             elif name == "betterdesk-desktop-manifest.json":
                 other.append(f"- [{name}]({_url(repo, tag, name)}) — desktop release manifest")
+            elif name.endswith(".apk"):
+                other.append(f"- [{name}]({_url(repo, tag, name)}) — Android APK")
+            elif name.endswith(".ipa"):
+                other.append(
+                    f"- [{name}]({_url(repo, tag, name)}) — unsigned iOS IPA (not device-installable until signed)"
+                )
         else:
             if name in ("manifest.json", "manifest.sig", "SHA256SUMS"):
                 other.append(f"- [{name}]({_url(repo, tag, name)})")

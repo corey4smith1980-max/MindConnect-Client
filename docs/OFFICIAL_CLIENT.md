@@ -3,7 +3,7 @@
 Ten fork ([BetterDesk-Client](../)) jest **oficjalnym klientem desktop BetterDesk**:
 
 1. **Nie łączy się** z publiczną infrastrukturą rustdesk.com.
-2. Użytkownik **wpisuje** ID / Relay / API / Key (Settings → Network) lub importuje deploy string z panelu.
+2. Domyślny build tego forka ma wkompilowany serwer z [`res/mindconnect/server.json`](../res/mindconnect/server.json). ID / Relay / API / Key są zablokowane (`override-settings` + `hide-server-settings`).
 3. Klient **identyfikuje się** wobec API jako `betterdesk-desktop` (`device_type` / `client_product`) oraz jawnym `product_sku` (`betterdesk-desktop` | `betterdesk-support`).
 4. Mechanizmy konfiguracji (`BETTERDESK_SUPPORT_CONFIG_B64`, deploy string i legacy `custom.txt`) są zachowane pod **Client Generator** w panelu web (dwa SKU — dualizm poniżej).
 
@@ -17,7 +17,7 @@ Ten fork ([BetterDesk-Client](../)) jest **oficjalnym klientem desktop BetterDes
 | Update check | URL pusty — nie woła `api.rustdesk.com` |
 | Connect `id@public` | zablokowane / ignorowane |
 
-Bez skonfigurowanego serwera klient **nie rejestruje się** na publicznym cloudu. Status bar pokazuje tip → otwiera Settings → Network.
+Bez skonfigurowanego serwera klient **nie rejestruje się** na publicznym cloudu. Domyślny build jest już skonfigurowany (patrz [README](../README.md#built-in-server)). Buildy `BETTERDESK_SUPPORT_CONFIG_B64` i `BETTERDESK_GENERIC_SUPPORT` zachowują własny profil i nie biorą tego pliku.
 
 ## Ręczna konfiguracja (produkt codzienny)
 
