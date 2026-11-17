@@ -714,7 +714,9 @@ fn activity_snapshot(app_name: String) -> Value {
 }
 
 fn collect_activity() -> Value {
-    let result = {
+    // Desktop branches return command_output()'s Result. Android and iOS only
+    // have Err("unsupported"), which cannot infer the Ok type on its own.
+    let result: Result<String, &'static str> = {
         #[cfg(windows)]
         {
             command_output(
