@@ -1,14 +1,26 @@
-# Builds the preconfigured MindConnect client for every CI platform.
-# Pull requests and manual runs upload Actions artifacts and do not publish a release.
-# GitHub Releases stay on betterdesk-desktop-release.yml (push to master / desktop tags).
+# Pull requests build the Android arm64 APK first.
+# workflow_dispatch scope:
+#   android-arm64 — one sideloadable APK
+#   rest — Windows, Linux, and macOS (no iOS)
+#   all — every job, including the unsigned iOS IPA
 name: MindConnect client builds
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: "android-arm64, rest, or all"
+        required: true
+        default: android-arm64
+        type: choice
+        options:
+          - android-arm64
+          - rest
+          - all
   pull_request:
 
 concurrency:
-  group: mindconnect-client-build-${{ github.workflow }}-${{ github.ref }}
+  group: mindconnect-${{ github.ref }}-${{ github.event.inputs.scope || 'android-arm64' }}
   cancel-in-progress: true
 
 jobs:
@@ -17,4 +29,5 @@ jobs:
     with:
       upload-artifact: true
       upload-tag: build-${{ github.run_id }}
+      scope: ${{ github.event.inputs.scope || 'android-arm64' }}
     secrets: inherit

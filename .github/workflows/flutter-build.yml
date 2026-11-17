@@ -25,6 +25,10 @@ on:
         description: "Exact source commit for an embedded Support build"
         type: string
         default: ""
+      scope:
+        description: "android-arm64, rest (Windows/Linux/macOS), or all"
+        type: string
+        default: "all"
 
 env:
   # Keep 1.75 on desktop Flutter/Windows (ABI / historical constraints from upstream).
@@ -57,8 +61,11 @@ env:
 jobs:
   generate-bridge:
     uses: ./.github/workflows/bridge.yml
+    with:
+      windows-arm-bridge: ${{ inputs.scope != 'android-arm64' }}
 
   build-RustDeskTempTopMostWindow:
+    if: inputs.scope != 'android-arm64'
     uses: ./.github/workflows/third-party-RustDeskTempTopMostWindow.yml
     strategy:
       fail-fast: false
@@ -80,6 +87,7 @@ jobs:
       target_version: Windows10
 
   build-for-windows-flutter:
+    if: inputs.scope != 'android-arm64'
     name: ${{ matrix.job.target }}
     needs: [build-RustDeskTempTopMostWindow, generate-bridge]
     runs-on: ${{ matrix.job.os }}
@@ -452,6 +460,7 @@ jobs:
       # GitHub Release is published only by betterdesk-desktop-release.yml.
 
   build-for-macOS:
+    if: inputs.scope != 'android-arm64'
     name: ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     needs: [generate-bridge]
@@ -673,6 +682,7 @@ jobs:
           done
 
   build-rustdesk-linux:
+    if: inputs.scope != 'android-arm64'
     needs: [generate-bridge]
     name: build rustdesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
@@ -993,6 +1003,7 @@ jobs:
             betterdesk-*.rpm
 
   build-mindconnect-android:
+    if: inputs.scope == 'all' || inputs.scope == 'android-arm64'
     needs: [generate-bridge]
     name: Android APK ${{ matrix.job.arch }}
     runs-on: ubuntu-22.04
@@ -1004,31 +1015,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job:
-          - {
-              arch: aarch64,
-              target: aarch64-linux-android,
-              abi: arm64-v8a,
-              flutter-platform: android-arm64,
-              ndk-lib: aarch64-linux-android,
-              script: ./flutter/ndk_arm64.sh,
-            }
-          - {
-              arch: armv7,
-              target: armv7-linux-androideabi,
-              abi: armeabi-v7a,
-              flutter-platform: android-arm,
-              ndk-lib: arm-linux-androideabi,
-              script: ./flutter/ndk_arm.sh,
-            }
-          - {
-              arch: x86_64,
-              target: x86_64-linux-android,
-              abi: x86_64,
-              flutter-platform: android-x64,
-              ndk-lib: x86_64-linux-android,
-              script: ./flutter/ndk_x64.sh,
-            }
+        job: ${{ fromJSON(inputs.scope == 'android-arm64' && '[{"arch":"aarch64","target":"aarch64-linux-android","abi":"arm64-v8a","flutter-platform":"android-arm64","ndk-lib":"aarch64-linux-android","script":"./flutter/ndk_arm64.sh"}]' || '[{"arch":"aarch64","target":"aarch64-linux-android","abi":"arm64-v8a","flutter-platform":"android-arm64","ndk-lib":"aarch64-linux-android","script":"./flutter/ndk_arm64.sh"},{"arch":"armv7","target":"armv7-linux-androideabi","abi":"armeabi-v7a","flutter-platform":"android-arm","ndk-lib":"arm-linux-androideabi","script":"./flutter/ndk_arm.sh"},{"arch":"x86_64","target":"x86_64-linux-android","abi":"x86_64","flutter-platform":"android-x64","ndk-lib":"x86_64-linux-android","script":"./flutter/ndk_x64.sh"}]') }}
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
@@ -1233,6 +1220,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   build-mindconnect-ios:
+    if: inputs.scope == 'all'
     # Unsigned IPA only. A device install needs an Apple distribution certificate
     # and a provisioning profile for this bundle id, which this fork does not have.
     continue-on-error: true
